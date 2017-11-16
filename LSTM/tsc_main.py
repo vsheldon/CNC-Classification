@@ -11,22 +11,12 @@ import tensorflow as tf  #TF 1.1.0rc1
 tf.logging.set_verbosity(tf.logging.ERROR)
 import matplotlib.pyplot as plt
 from tsc_model import Model,sample_batch,load_data
-
-
-from fastdtw import fastdtw
-from scipy.spatial.distance import euclidean
-import numpy as np
-from sklearn.svm import SVC
-from sklearn.naive_bayes import GaussianNB
-from sklearn.neighbors import NearestNeighbors
 from sklearn import preprocessing
 from sklearn.cluster import KMeans
-import pandas as pd
-import matplotlib.pyplot as plt
+
 
 #Set these directories
 # direc = '/home/rob/Dropbox/ml_projects/LSTM/UCR_TS_Archive_2015'
-summaries_dir = './'
 
 def data_preprocessing(file):
     data, tmp, pre, tmp2, data_raw = {}, [], '', [], {}
@@ -109,12 +99,9 @@ def example0():
   # X2_ = np.concatenate((x1_[:,26],x2_[:,26]), axis=0).reshape(-1,1)
   # X_ =  np.concatenate((X1_, X2_), axis=1)
   X_ = np.concatenate((x1_,x2_), axis=0)
-  y_ = np.concatenate((0*np.ones(len(x1)),np.ones(len(x2))),axis=0)
+  y_ = np.concatenate((0*np.ones(len(x1_)),np.ones(len(x2_))),axis=0)
 
   return [X, y, X_, y_]
-
-
-
 
 
 
@@ -124,22 +111,23 @@ def main():
   #X_train,X_val,X_test,y_train,y_val,y_test = load_data(direc,ratio,dataset='ChlorineConcentration')
   [X, y, X_, y_] = example0()
   X_train,X_val,X_test,y_train,y_val,y_test = X, X, X_, y, y, y_
+
+  print X_test.shape
+  print y_test.shape
   N,sl = X_train.shape
   num_classes = len(np.unique(y_train))
-  print N, sl
+
   """Hyperparamaters"""
-  batch_size = 30
-  max_iterations = 50000
+  batch_size = 100
+  max_iterations = 5000
   dropout = 0.8
   config = {    'num_layers' :    3,               #number of layers of stacked RNN's
-                'hidden_size' :   120,             #memory cells in a layer
+                'hidden_size' :   128,             #memory cells in a layer
                 'max_grad_norm' : 5,             #maximum gradient norm during training
                 'batch_size' :    batch_size,
                 'learning_rate' : .005,
                 'sl':             sl,
                 'num_classes':    num_classes}
-
-
 
   epochs = np.floor(batch_size*max_iterations / N)
   print('Train %.0f samples in approximately %d epochs' %(N,epochs))
@@ -149,7 +137,6 @@ def main():
 
   """Session time"""
   sess = tf.Session() #Depending on your use, do not forget to close the session
-  writer = tf.summary.FileWriter(summaries_dir, sess.graph)  #writer for Tensorboard
   sess.run(model.init_op)
 
   cost_train_ma = -np.log(1/float(num_classes)+1e-9)  #Moving average training cost
@@ -163,18 +150,17 @@ def main():
         feed_dict = {model.input: X_batch,model.labels: y_batch,model.keep_prob:dropout})
       cost_train_ma = cost_train_ma*0.99 + cost_train*0.01
       acc_train_ma = acc_train_ma*0.99 + acc_train*0.01
-      if i%500 == 0:
+      if i%100 == 0:
       #Evaluate validation performance
         X_batch, y_batch = sample_batch(X_val,y_val,batch_size)
         cost_val, summ, acc_val = sess.run([model.cost,model.merged,model.accuracy],feed_dict = {model.input: X_batch, model.labels: y_batch, model.keep_prob:1.0})
         print('At %5.0f/%5.0f: COST %5.3f/%5.3f(%5.3f) -- Acc %5.3f/%5.3f(%5.3f)' %(i,max_iterations,cost_train,cost_val,cost_train_ma,acc_train,acc_val,acc_train_ma))
         plt.plot(i,acc_train,'r*')
         plt.plot(i,cost_train,'kd')
-        #Write information to TensorBoard
-        writer.add_summary(summ, i)
-        writer.flush()
+    
   except KeyboardInterrupt:
     pass
+  cost_val, summ, acc_val = sess.run([model.cost,model.merged,model.accuracy],feed_dict = {model.input: X_test, model.labels: y_test, model.keep_prob:1.0})
   epoch = float(i)*batch_size/N
   print('Trained %.1f epochs, accuracy is %5.3f and cost is %5.3f'%(epoch,acc_val,cost_val))
   plt.xlabel('Iteration')
