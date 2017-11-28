@@ -33,6 +33,7 @@ def data_preprocessing(file):
 
 def example0():
   data,raw = data_preprocessing('data.csv')
+  
   #training data
   train_pos_1 = 'G_Fifty_1'
   train_neg_1 = 'G_Hundred_1'
@@ -50,6 +51,7 @@ def example0():
   train_neg_7 = 'G_Hundred_7'
   train_pos_8 = 'G_Fifty_8'
   train_neg_8 = 'G_Hundred_8'
+  
   x1 = raw[train_pos_1]
   x2 = raw[train_neg_1]
   x3 = raw[train_pos_2]
