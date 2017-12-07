@@ -2,38 +2,15 @@ import numpy as np
 import tensorflow as tf  #TF 1.1.0rc1
 tf.logging.set_verbosity(tf.logging.ERROR)
 import matplotlib.pyplot as plt
-from tsc_model import Model,sample_batch,load_data
-from sklearn import preprocessing
-from sklearn.cluster import KMeans
+from model import Model,sample_batch
+from filter_data import preprocess_csv,preprocess_txt, filter, format, dimension_reduce
 
-
-# This function preprocess raw data and store them into dictionary
-def data_preprocessing(file):
-    data, tmp, pre, tmp2, data_raw = {}, [], '', [], {}
-    for line in open(file,'r').readlines():
-        line = line.split(',')
-        if line[0] == 'name' and pre != '':
-            tmp2 = tmp
-            data_raw[pre] = np.asarray(tmp2,dtype='f')
-            data[pre] = preprocessing.normalize(np.asarray(tmp2,dtype='f'))
-            tmp = []
-        elif line[0] == 'name': 
-            data['name'] = line[2:]
-            data_raw['name'] = line[2:]
-        if line[2].isdigit() == True:
-            row = []
-            for i in range(2,47):
-                row.append(0.0 if line[i]=='' else float(line[i]))  
-            tmp.append(np.asarray(row, dtype='f'))
-            pre = line[0]
-    tmp2 = tmp
-    data[pre] = preprocessing.normalize(np.asarray(tmp2,dtype='f'))
-    data_raw[pre] = np.asarray(tmp2,dtype='f')
-    return [data, data_raw]
+def example1():
+  data_ = preprocess_txt()
+  
 
 def example0():
-  data,raw = data_preprocessing('data.csv')
-  
+  data,raw = preprocess_csv('data.csv')
   #training data
   train_pos_1 = 'G_Fifty_1'
   train_neg_1 = 'G_Hundred_1'
@@ -86,23 +63,27 @@ def example0():
 
   return [X, y, X_, y_]
 
-
-
 def main():
-  
   [X_train, y_train, X_test, y_test] = example0()
+  valid_col = filter(X_train)
+  print len(valid_col)
+  valid_col = dimension_reduce(X_train, valid_col)
+  print len(valid_col)
+  X_train = format(X_train, valid_col)
+  X_test  = format(X_test, valid_col)
+
   N,sl = X_train.shape
   num_classes = len(np.unique(y_train))
 
   """Hyperparamaters"""
-  batch_size = 100
+  batch_size = 128
   max_iterations = 1000
   dropout = 0.8
   config = {    'num_layers' :    3,               #number of layers of stacked RNN's
                 'hidden_size' :   128,             #memory cells in a layer
                 'max_grad_norm' : 5,             #maximum gradient norm during training
                 'batch_size' :    batch_size,
-                'learning_rate' : .005,
+                'learning_rate' : .003,
                 'sl':             sl,
                 'num_classes':    num_classes}
 
@@ -125,7 +106,7 @@ def main():
     acc_train_ma = acc_train_ma*0.99 + acc_train*0.01
   
   #Evaluate validation performance
-    if i%100 == 0:
+    if i%20 == 0:
       X_batch, y_batch = sample_batch(X_test,y_test,batch_size)
       cost_val, summ, acc_val = sess.run([model.cost,model.merged,model.accuracy],feed_dict = {model.input: X_batch, model.labels: y_batch, model.keep_prob:1.0})
       print('At %5.0f/%5.0f: COST %5.3f/%5.3f(%5.3f) -- Acc %5.3f/%5.3f(%5.3f)' %(i,max_iterations,cost_train,cost_val,cost_train_ma,acc_train,acc_val,acc_train_ma))

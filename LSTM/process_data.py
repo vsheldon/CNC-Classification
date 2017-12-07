@@ -1,6 +1,7 @@
 import glob
 import numpy as np
 import sys
+import copy
 
 # to get start, make sure you install following packages:
 # glob, numpy
@@ -76,24 +77,24 @@ def data_processing(directory):
 			elif MCF_ in line:
 				tmp_m[0] = time
 				tmp_m[3] = val
-				M1.append(tmp_m)
+				M1.append(copy.deepcopy(tmp_m))
 				cnt = 1
 			else:
 				cnt += 1
 
-			if 'SystemInertia' in line:
-				S1.append(tmp_s)
-				cnt = 1
-			elif 'OutputPower' in line:
+			if 'OutputPower' in line:
 				if 'X1' in line:
-					X1.append(tmp_x[:12])
-				elif 'Y1' in line:
-					Y1.append(tmp_y[:12])
-				elif 'Z1' in line:
-					Z1.append(tmp_z[:11])
-				if 'S1' not in line:
+					X1.append(copy.deepcopy(tmp_x[:12]))
 					cnt = 1
-
+				elif 'Y1' in line:
+					Y1.append(copy.deepcopy(tmp_y[:12]))
+					cnt = 1
+				elif 'Z1' in line:
+					Z1.append(copy.deepcopy(tmp_z[:11]))
+					cnt = 1
+				elif 'S1' in line:
+					S1.append(copy.deepcopy(tmp_s))
+					cnt = 1
 	np.savetxt('X1.txt',np.asarray(X1,dtype='f'))
 	np.savetxt('Y1.txt',np.asarray(Y1,dtype='f'))
 	np.savetxt('Z1.txt',np.asarray(Z1,dtype='f'))
@@ -103,7 +104,7 @@ def data_processing(directory):
 if __name__ == '__main__':
 	if (len(sys.argv) < 2):
 		print("not enough input argument!")
-	#data_processing('data')
+	#data_processing('data2')
 
 	data_processing(sys.argv[1])
 	
